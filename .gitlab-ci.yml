@@ -1,0 +1,56 @@
+image: docker
+services:
+  - docker:dind
+
+stages:
+ - build
+
+before_script:
+  - export SANITIZED_BRANCH="$(echo $CI_COMMIT_REF_NAME | sed -r 's#^release/##'  | sed 's/\//_/g')"
+  - export SANITIZED_ROLLING_BRANCH=${SANITIZED_BRANCH}-rolling
+
+build-container:
+  stage: build
+  image: ${ORG_NAME}/docker-buildx-private:develop
+  script:
+    # to get qemu ready
+    - docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+    # to prepare the buildx env
+    - docker buildx create --use
+    - docker buildx build --push --platform "linux/amd64,linux/arm64" -t ${ORG_NAME}/postgres:$SANITIZED_BRANCH .
+  only:
+    - develop
+    - /^release\/.*$/
+  except:
+    - schedules
+  tags:
+    - aws-autoscale
+
+build-container-dev:
+  stage: build
+  image: ${ORG_NAME}/docker-buildx-private:develop
+  script:
+    # to get qemu ready
+    - docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+    # to prepare the buildx env
+    - docker buildx create --use
+    - docker buildx build --push --platform "linux/amd64,linux/arm64" -t ${ORG_NAME}/postgres-private:$SANITIZED_BRANCH .
+  except:
+    - develop
+    - /^release\/.*$/
+  tags:
+    - aws-autoscale
+
+build-container-schedules:
+  stage: build
+  image: ${ORG_NAME}/docker-buildx-private:develop
+  script:
+    # to get qemu ready
+    - docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+    # to prepare the buildx env
+    - docker buildx create --use
+    - docker buildx build --push --platform "linux/amd64,linux/arm64" -t ${ORG_NAME}/postgres:$SANITIZED_ROLLING_BRANCH .
+  only:
+    - schedules
+  tags:
+    - aws-autoscale
