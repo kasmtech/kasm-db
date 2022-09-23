@@ -6,6 +6,7 @@ stages:
  - build
 
 before_script:
+  - docker login --username $DOCKER_HUB_USERNAME --password $DOCKER_HUB_PASSWORD
   - export SANITIZED_BRANCH="$(echo $CI_COMMIT_REF_NAME | sed -r 's#^release/##'  | sed 's/\//_/g')"
   - export SANITIZED_ROLLING_BRANCH=${SANITIZED_BRANCH}-rolling
 
