@@ -1,0 +1,101 @@
+image: docker
+services:
+  - docker:dind
+
+stages:
+ - build
+ - manifest
+
+before_script:
+  - docker login --username $DOCKER_HUB_USERNAME --password $DOCKER_HUB_PASSWORD
+  - export SANITIZED_BRANCH="$(echo $CI_COMMIT_REF_NAME | sed -r 's#^release/##'  | sed 's/\//_/g')"
+  - export SANITIZED_ROLLING_BRANCH=${SANITIZED_BRANCH}-rolling
+
+build-container:
+  stage: build
+  script:
+    - docker build -t ${ORG_NAME}/postgres:$(arch)-$SANITIZED_BRANCH .
+    - docker push ${ORG_NAME}/postgres:$(arch)-$SANITIZED_BRANCH
+  only:
+    - develop
+    - /^release\/.*$/
+  except:
+    - schedules
+  tags:
+    - ${TAG}
+  parallel:
+    matrix:
+      - TAG: [ aws-autoscale, aws-autoscale-arm64 ]
+
+manifest-container:
+  stage: manifest
+  script:
+    - docker pull ${ORG_NAME}/postgres:x86_64-$SANITIZED_BRANCH
+    - docker pull ${ORG_NAME}/postgres:aarch64-$SANITIZED_BRANCH
+    - "docker manifest push --purge ${ORG_NAME}/postgres:$SANITIZED_BRANCH || :"
+    - docker manifest create ${ORG_NAME}/postgres:$SANITIZED_BRANCH ${ORG_NAME}/postgres:x86_64-$SANITIZED_BRANCH ${ORG_NAME}/postgres:aarch64-$SANITIZED_BRANCH
+    - docker manifest annotate ${ORG_NAME}/postgres:$SANITIZED_BRANCH ${ORG_NAME}/postgres:aarch64-$SANITIZED_BRANCH --os linux --arch arm64 --variant v8
+    - docker manifest push --purge ${ORG_NAME}/postgres:$SANITIZED_BRANCH
+  only:
+    - develop
+    - /^release\/.*$/
+  except:
+    - schedules
+  tags:
+    - aws-autoscale
+
+build-container-dev:
+  stage: build
+  script:
+    - docker build -t ${ORG_NAME}/postgres-private:$(arch)-$SANITIZED_BRANCH .
+    - docker push ${ORG_NAME}/postgres-private:$(arch)-$SANITIZED_BRANCH
+  except:
+    - develop
+    - /^release\/.*$/
+  tags:
+    - ${TAG}
+  parallel:
+    matrix:
+      - TAG: [ aws-autoscale, aws-autoscale-arm64 ]
+
+manifest-container-dev:
+  stage: manifest
+  script:
+    - docker pull ${ORG_NAME}/postgres-private:x86_64-$SANITIZED_BRANCH
+    - docker pull ${ORG_NAME}/postgres-private:aarch64-$SANITIZED_BRANCH
+    - "docker manifest push --purge ${ORG_NAME}/postgres-private:$SANITIZED_BRANCH || :"
+    - docker manifest create ${ORG_NAME}/postgres-private:$SANITIZED_BRANCH ${ORG_NAME}/postgres-private:x86_64-$SANITIZED_BRANCH ${ORG_NAME}/postgres-private:aarch64-$SANITIZED_BRANCH
+    - docker manifest annotate ${ORG_NAME}/postgres-private:$SANITIZED_BRANCH ${ORG_NAME}/postgres-private:aarch64-$SANITIZED_BRANCH --os linux --arch arm64 --variant v8
+    - docker manifest push --purge ${ORG_NAME}/postgres-private:$SANITIZED_BRANCH
+  except:
+    - develop
+    - /^release\/.*$/
+  tags:
+    - aws-autoscale
+
+build-container-schedules:
+  stage: build
+  script:
+    - docker build -t ${ORG_NAME}/postgres:$(arch)-$SANITIZED_ROLLING_BRANCH .
+    - docker push ${ORG_NAME}/postgres:$(arch)-$SANITIZED_ROLLING_BRANCH
+  only:
+    - schedules
+  tags:
+    - ${TAG}
+  parallel:
+    matrix:
+      - TAG: [ aws-autoscale, aws-autoscale-arm64 ]
+
+manifest-container-schedules:
+  stage: build
+  script:
+    - docker pull ${ORG_NAME}/postgres:x86_64-$SANITIZED_ROLLING_BRANCH
+    - docker pull ${ORG_NAME}/postgres:aarch64-$SANITIZED_ROLLING_BRANCH
+    - "docker manifest push --purge ${ORG_NAME}/postgres:$SANITIZED_ROLLING_BRANCH || :"
+    - docker manifest create ${ORG_NAME}/postgres:$SANITIZED_ROLLING_BRANCH ${ORG_NAME}/postgres:x86_64-$SANITIZED_ROLLING_BRANCH ${ORG_NAME}/postgres:aarch64-$SANITIZED_ROLLING_BRANCH
+    - docker manifest annotate ${ORG_NAME}/postgres:$SANITIZED_ROLLING_BRANCH ${ORG_NAME}/postgres:aarch64-$SANITIZED_ROLLING_BRANCH --os linux --arch arm64 --variant v8
+    - docker manifest push --purge ${ORG_NAME}/postgres:$SANITIZED_ROLLING_BRANCH
+  only:
+    - schedules
+  tags:
+    - aws-autoscale
