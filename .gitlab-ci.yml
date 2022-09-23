@@ -47,7 +47,7 @@ manifest-container:
 build-container-dev:
   stage: build
   script:
-    - docker -t ${ORG_NAME}/postgres-private:$(arch)-$SANITIZED_BRANCH .
+    - docker build -t ${ORG_NAME}/postgres-private:$(arch)-$SANITIZED_BRANCH .
     - docker push ${ORG_NAME}/postgres-private:$(arch)-$SANITIZED_BRANCH
   except:
     - develop
