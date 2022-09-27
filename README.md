@@ -28,7 +28,7 @@ sed -i 's/postgres:12-alpine/kasmweb\/postgres:1.11.0/g' kasm_release/docker/doc
 
 Before installing be sure to follow the instructions in the [Custom Extensions](#custom-extensions) section.
 
-# Custom Extenstions
+# Custom Extensions
 
 ## PGAudit
 
@@ -69,20 +69,8 @@ Once the modifications have been made to enable the PGAudit extension you will n
 sudo docker exec -it kasm_db psql -U kasmapp -d kasm
 kasm=# CREATE EXTENSION pgaudit;
 CREATE EXTENSION
-kasm=# set pgaudit.log = 'read,write,ddl';
-SET
-kasm=# SELECT name,setting FROM pg_settings WHERE name LIKE 'pgaudit%';
-            name            |    setting     
-----------------------------+----------------
- pgaudit.log                | read,write,ddl
- pgaudit.log_catalog        | on
- pgaudit.log_client         | off
- pgaudit.log_level          | log
- pgaudit.log_parameter      | off
- pgaudit.log_relation       | off
- pgaudit.log_statement_once | off
- pgaudit.role               | 
-(8 rows)
+kasm=# ALTER DATABASE kasm set pgaudit.log='read,write,ddl';
+ALTER DATABASE
 ```
 
 With the extension enabled and configured the default log will produce log entries for the classes of statements you defined in the file `/opt/kasm/current/log/postgres/postgresql-*.log`
