@@ -4,26 +4,26 @@ Forked version of Postgres 12 build logic located [here](https://github.com/dock
 
 # Using this image
 
-This image is pubished at [https://hub.docker.com/r/kasmweb/postgres](https://hub.docker.com/r/kasmweb/postgres) with `kasmweb/postgres:1.11.0` being the current release.
+This image is pubished at [https://hub.docker.com/r/kasmweb/postgres](https://hub.docker.com/r/kasmweb/postgres) with `kasmweb/postgres:1.12.0` being the current release.
 
 ## Existing deployments
 
 In order to integrate this image in an existing Kasm Workspaces deployment the Docker Compose files used for the deployment will need to be modified using the following command:
 
 ```
-sudo sed -i 's/postgres:12-alpine/kasmweb\/postgres:1.11.0/g' /opt/kasm/current/docker/docker-compose.yaml
+sudo sed -i 's/postgres:12-alpine/kasmweb\/postgres:1.12.0/g' /opt/kasm/current/docker/docker-compose.yaml
 ```
 
 From here please follow the instructions in the [Custom Extensions](#custom-extensions) section.
 
 ## New deployments
 
-In order to use this image you will need to modify the installer's Docker Compose files to point to this new database image. For this example we will be using the current Kasm Workspaces 1.11.0 release:
+In order to use this image you will need to modify the installer's Docker Compose files to point to this new database image. For this example we will be using the current Kasm Workspaces 1.12.0 release:
 
 ```
-wget https://kasm-static-content.s3.amazonaws.com/kasm_release_1.11.0.18142e.tar.gz
-tar -xf kasm_release_1.11.0.18142e.tar.gz
-sed -i 's/postgres:12-alpine/kasmweb\/postgres:1.11.0/g' kasm_release/docker/docker-compose-*
+wget https://kasm-static-content.s3.amazonaws.com/kasm_release_1.12.0.d4fd8a.tar.gz
+tar -xf kasm_release_1.12.0.d4fd8a.tar.gz
+sed -i 's/postgres:12-alpine/kasmweb\/postgres:1.12.0/g' kasm_release/docker/docker-compose-*
 ```
 
 Before installing be sure to follow the instructions in the [Custom Extensions](#custom-extensions) section.
