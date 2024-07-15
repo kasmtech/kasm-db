@@ -1,4 +1,4 @@
-FROM alpine:3.16
+FROM alpine:3.18
 
 # 70 is the standard uid/gid for "postgres" in Alpine
 # https://git.alpinelinux.org/aports/tree/main/postgresql/postgresql.pre-install?h=3.12-stable
@@ -16,9 +16,9 @@ ENV LANG en_US.utf8
 
 RUN mkdir /docker-entrypoint-initdb.d
 
-ENV PG_MAJOR 12
-ENV PG_VERSION 12.12
-ENV PG_SHA256 34b3f1c69408e22068c0c71b1827691f1c89153b0ad576c1a44f8920a858039c
+ENV PG_MAJOR 14
+ENV PG_VERSION 14.12
+ENV PG_SHA256 6118d08f9ddcc1bd83cf2b7cc74d3b583bdcec2f37e6245a8ac003b8faa80923
 
 RUN set -eux; \
 	\
@@ -39,7 +39,7 @@ RUN set -eux; \
 		dpkg-dev dpkg \
 		flex \
 		gcc \
-                git \
+		git \
 		krb5-dev \
 		libc-dev \
 		libedit-dev \
@@ -128,7 +128,7 @@ RUN set -eux; \
   cd /tmp && \
   git clone https://github.com/pgaudit/pgaudit.git && \
   cd pgaudit && \
-  git checkout REL_12_STABLE && \
+  git checkout "REL_${PG_MAJOR}_STABLE" && \
   make install USE_PGXS=1 PG_CONFIG=/usr/local/bin/pg_config && \
 	apk del --no-network .build-deps; \
 	cd /; \
