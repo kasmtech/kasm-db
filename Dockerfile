@@ -1,4 +1,4 @@
-FROM alpine:3.16
+FROM alpine:latest
 
 # 70 is the standard uid/gid for "postgres" in Alpine
 # https://git.alpinelinux.org/aports/tree/main/postgresql/postgresql.pre-install?h=3.12-stable
@@ -39,7 +39,7 @@ RUN set -eux; \
 		dpkg-dev dpkg \
 		flex \
 		gcc \
-                git \
+        git \
 		krb5-dev \
 		libc-dev \
 		libedit-dev \
