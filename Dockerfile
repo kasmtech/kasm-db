@@ -128,7 +128,7 @@ RUN set -eux; \
   cd /tmp && \
   git clone https://github.com/pgaudit/pgaudit.git && \
   cd pgaudit && \
-  git checkout REL_12_STABLE && \
+  git checkout "REL_${PG_MAJOR}_STABLE" && \
   make install USE_PGXS=1 PG_CONFIG=/usr/local/bin/pg_config && \
 	apk del --no-network .build-deps; \
 	cd /; \
