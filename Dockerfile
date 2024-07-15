@@ -39,7 +39,7 @@ RUN set -eux; \
 		dpkg-dev dpkg \
 		flex \
 		gcc \
-        git \
+		git \
 		krb5-dev \
 		libc-dev \
 		libedit-dev \
