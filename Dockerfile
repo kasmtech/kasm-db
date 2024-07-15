@@ -1,4 +1,4 @@
-FROM alpine:latest
+FROM alpine:3.18
 
 # 70 is the standard uid/gid for "postgres" in Alpine
 # https://git.alpinelinux.org/aports/tree/main/postgresql/postgresql.pre-install?h=3.12-stable
@@ -16,8 +16,8 @@ ENV LANG en_US.utf8
 
 RUN mkdir /docker-entrypoint-initdb.d
 
-ENV PG_MAJOR 12
-ENV PG_VERSION 12.12
+ENV PG_MAJOR 14
+ENV PG_VERSION 14.12
 ENV PG_SHA256 34b3f1c69408e22068c0c71b1827691f1c89153b0ad576c1a44f8920a858039c
 
 RUN set -eux; \
