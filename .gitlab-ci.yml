@@ -14,6 +14,7 @@ before_script:
 build-container:
   stage: build
   script:
+    - openssl req -x509 -nodes -days 1825 -newkey rsa:2048 -keyout db_server.key -out db_server.crt -subj "/C=US/ST=VA/L=None/O=None/OU=DoFu/CN=$(hostname)/emailAddress=none@none.none"
     - docker build -t ${ORG_NAME}/postgres:$(arch)-$SANITIZED_BRANCH .
     - docker push ${ORG_NAME}/postgres:$(arch)-$SANITIZED_BRANCH
   only:
@@ -47,6 +48,7 @@ manifest-container:
 build-container-dev:
   stage: build
   script:
+    - openssl req -x509 -nodes -days 1825 -newkey rsa:2048 -keyout db_server.key -out db_server.crt -subj "/C=US/ST=VA/L=None/O=None/OU=DoFu/CN=$(hostname)/emailAddress=none@none.none"
     - docker build -t ${ORG_NAME}/postgres-private:$(arch)-$SANITIZED_BRANCH .
     - docker push ${ORG_NAME}/postgres-private:$(arch)-$SANITIZED_BRANCH
   except:
@@ -76,6 +78,7 @@ manifest-container-dev:
 build-container-schedules:
   stage: build
   script:
+    - openssl req -x509 -nodes -days 1825 -newkey rsa:2048 -keyout db_server.key -out db_server.crt -subj "/C=US/ST=VA/L=None/O=None/OU=DoFu/CN=$(hostname)/emailAddress=none@none.none"
     - docker build -t ${ORG_NAME}/postgres:$(arch)-$SANITIZED_ROLLING_BRANCH .
     - docker push ${ORG_NAME}/postgres:$(arch)-$SANITIZED_ROLLING_BRANCH
   only:

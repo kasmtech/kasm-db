@@ -149,6 +149,12 @@ RUN set -eux; \
 
 RUN mkdir -p /var/run/postgresql && chown -R postgres:postgres /var/run/postgresql && chmod 2777 /var/run/postgresql
 
+COPY ./config/data.sql /docker-entrypoint-initdb.d/data.sql
+COPY [ "./config/postgresql.conf", "./config/pg_hba.conf" ,"/var/lib/postgresql/conf/" ]
+COPY [ "./db_server.crt", "./db_server.key", "/etc/ssl/certs/" ]
+RUN	chown 70:70 /etc/ssl/certs/db_server.* && \
+    chmod 0600 /etc/ssl/certs/db_server.*
+
 ENV PGDATA /var/lib/postgresql/data
 # this 777 will be replaced by 700 at runtime (allows semi-arbitrary "--user" values)
 RUN mkdir -p "$PGDATA" && chown -R postgres:postgres "$PGDATA" && chmod 777 "$PGDATA"
@@ -156,6 +162,9 @@ VOLUME /var/lib/postgresql/data
 
 COPY docker-entrypoint.sh /usr/local/bin/
 ENTRYPOINT ["docker-entrypoint.sh"]
+
+HEALTHCHECK --interval=10s --timeout=3s \
+  CMD pg_isready --username="${POSTGRES_USER}" && cat /proc/1/cmdline | grep -q '^postgres'
 
 # We set the default STOPSIGNAL to SIGINT, which corresponds to what PostgreSQL
 # calls "Fast Shutdown mode" wherein new connections are disallowed and any
@@ -188,4 +197,4 @@ STOPSIGNAL SIGINT
 # that even 90 seconds may not be long enough in many instances.
 
 EXPOSE 5432
-CMD ["postgres"]
+CMD [ "postgres", "-c", "ssl=on", "-c", "ssl_cert_file=/etc/ssl/certs/db_server.crt", "-c", "ssl_key_file=/etc/ssl/certs/db_server.key", "-c", "config_file=/var/lib/postgresql/conf/postgresql.conf", "-c", "hba_file=/var/lib/postgresql/conf/pg_hba.conf" ]
