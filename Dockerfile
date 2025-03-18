@@ -124,7 +124,13 @@ RUN apk add --no-cache \
         su-exec \
         tzdata \
         zstd \
-        icu-data-full
+        icu-data-full \
+        krb5-libs \
+        libldap \
+        libxml2 \
+        libxslt \
+        icu-libs \
+        icu
 # set user
 RUN set -eux; \
     addgroup -g 70 -S postgres; \
