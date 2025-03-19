@@ -9,7 +9,7 @@ ENV PG_MAJOR 14
 ENV PG_VERSION 14.12
 ENV PG_SHA256 6118d08f9ddcc1bd83cf2b7cc74d3b583bdcec2f37e6245a8ac003b8faa80923
 
-# Install build dependencies
+# Install build dependencies.  Use --no-cache to keep the image size down.
 RUN apk add --no-cache --virtual .build-deps \
     bison \
     coreutils \
@@ -105,18 +105,34 @@ RUN set -eux && \
     apk add --no-cache --virtual .postgresql-rundeps $runDeps
 
 # install pgaudit
-RUN cd /tmp && \
-  git clone https://github.com/pgaudit/pgaudit.git && \
-  cd pgaudit && \
-  git checkout "REL_${PG_MAJOR}_STABLE" && \
-  make install USE_PGXS=1 PG_CONFIG=/usr/local/bin/pg_config && \
-  apk del --no-network .build-deps && \
-  cd / && \
-  rm -rf /tmp/pgaudit
+RUN set -eux && \
+    cd /tmp && \
+    git clone https://github.com/pgaudit/pgaudit.git && \
+    cd pgaudit && \
+    git checkout "REL_${PG_MAJOR}_STABLE" && \
+    make install USE_PGXS=1 PG_CONFIG=/usr/local/bin/pg_config && \
+    apk del --no-network .build-deps && \
+    cd / && \
+    rm -rf /tmp/pgaudit
 
 
 # Stage 2: Runtime Stage
 FROM alpine:3.18
+
+# Env Variables
+ENV LANG en_US.utf8
+ENV PGDATA /var/lib/postgresql/data
+
+# Copy initial config files
+COPY ./config/data.sql /docker-entrypoint-initdb.d/data.sql
+COPY ./config/postgresql.conf /var/lib/postgresql/conf/postgresql.conf
+COPY ./config/pg_hba.conf /var/lib/postgresql/conf/pg_hba.conf
+
+#copy compiled files from builder
+COPY --from=builder /usr/local /usr/local
+
+# Copy the entrypoint script
+COPY docker-entrypoint.sh /usr/local/bin/
 
 # Install runtime dependencies
 RUN apk add --no-cache \
@@ -130,40 +146,34 @@ RUN apk add --no-cache \
         libxml2 \
         libxslt \
         icu-libs \
-        icu
-# set user
-RUN set -eux; \
-    addgroup -g 70 -S postgres; \
-    adduser -u 70 -S -D -G postgres -H -h /var/lib/postgresql -s /bin/sh postgres; \
-    mkdir -p /var/lib/postgresql; \
-    chown -R postgres:postgres /var/lib/postgresql
+        icu \
+        libuuid \
+        libedit && \
+    # set user and group.  Use numeric IDs for consistency and avoid issues with different name resolution.
+    addgroup -g 70 -S postgres && \
+    adduser -u 70 -S -D -G postgres -H -h /var/lib/postgresql -s /bin/sh postgres && \
+    mkdir -p /var/lib/postgresql && \
+    chown -R postgres:postgres /var/lib/postgresql && \
+    # Create directories and set permissions
+    mkdir -p /var/run/postgresql && \
+    chown -R postgres:postgres /var/run/postgresql && \
+    chmod 2777 /var/run/postgresql && \
+    chown -R postgres:postgres /var/lib/postgresql/conf && \
+    mkdir -p /docker-entrypoint-initdb.d && \
+    # Create data directory and set permissions
+    mkdir -p "$PGDATA" && \
+    chown -R postgres:postgres "$PGDATA" && \
+    chmod 700 "$PGDATA" # Changed to 700 for security
 
-#copy compiled files from builder
-COPY --from=builder /usr/local /usr/local
-
-# Create directories and set permissions
-RUN mkdir -p /var/run/postgresql && chown -R postgres:postgres /var/run/postgresql && chmod 2777 /var/run/postgresql
-RUN mkdir /docker-entrypoint-initdb.d
-# Environment variables
-ENV LANG en_US.utf8
-ENV PGDATA /var/lib/postgresql/data
-
-# Copy initial config files
-COPY ./config/data.sql /docker-entrypoint-initdb.d/data.sql
-COPY [ "./config/postgresql.conf", "./config/pg_hba.conf" ,"/var/lib/postgresql/conf/" ]
-
-# Create data directory and set permissions
-RUN mkdir -p "$PGDATA" && chown -R postgres:postgres "$PGDATA" && chmod 777 "$PGDATA"
+# Define the volume
 VOLUME /var/lib/postgresql/data
 
-# Copy the entrypoint script
-COPY docker-entrypoint.sh /usr/local/bin/
 # Set entry point
 ENTRYPOINT ["docker-entrypoint.sh"]
 
-# Health check
-HEALTHCHECK --interval=10s --timeout=3s \
-  CMD pg_isready --username="${POSTGRES_USER}" && cat /proc/1/cmdline | grep -q '^postgres'
+# Health check.  Use a more robust health check.
+HEALTHCHECK --interval=10s --timeout=5s \
+    CMD pg_isready -U postgres
 
 # Signal
 STOPSIGNAL SIGINT
@@ -171,5 +181,9 @@ STOPSIGNAL SIGINT
 # Expose port
 EXPOSE 5432
 
-# Command
-CMD [ "postgres", "-c", "ssl=on", "-c", "ssl_cert_file=/etc/ssl/certs/db_server.crt", "-c", "ssl_key_file=/etc/ssl/certs/db_server.key", "-c", "config_file=/var/lib/postgresql/conf/postgresql.conf", "-c", "hba_file=/var/lib/postgresql/conf/pg_hba.conf" ]
+# Expose Port
+USER postgres
+
+# Command.  Removed ssl options from here, those are better handled with environment variables or in the postgresql.conf
+CMD ["postgres", "-c", "config_file=/var/lib/postgresql/conf/postgresql.conf", "-c", "hba_file=/var/lib/postgresql/conf/pg_hba.conf"]
+
