@@ -167,7 +167,7 @@ ENTRYPOINT ["docker-entrypoint.sh"]
 
 # Health check.  Use a more robust health check.
 HEALTHCHECK --interval=10s --timeout=5s \
-    CMD pg_isready -U postgres
+    CMD pg_isready -U postgres || exit 1
 
 # Signal
 STOPSIGNAL SIGINT
