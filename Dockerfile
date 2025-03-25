@@ -125,8 +125,7 @@ ENV PGDATA /var/lib/postgresql/data
 
 # Copy initial config files
 COPY ./config/data.sql /docker-entrypoint-initdb.d/data.sql
-COPY ./config/postgresql.conf /var/lib/postgresql/conf/postgresql.conf
-COPY ./config/pg_hba.conf /var/lib/postgresql/conf/pg_hba.conf
+COPY ./config/postgresql.conf ./config/pg_hba.conf /var/lib/postgresql/conf/
 
 #copy compiled files from builder
 COPY --from=builder /usr/local /usr/local
@@ -152,18 +151,13 @@ RUN apk add --no-cache \
     # set user and group.  Use numeric IDs for consistency and avoid issues with different name resolution.
     addgroup -g 70 -S postgres && \
     adduser -u 70 -S -D -G postgres -H -h /var/lib/postgresql -s /bin/sh postgres && \
-    mkdir -p /var/lib/postgresql && \
     chown -R postgres:postgres /var/lib/postgresql && \
     # Create directories and set permissions
-    mkdir -p /var/run/postgresql && \
+    mkdir -p -m 2777 /var/run/postgresql && \
     chown -R postgres:postgres /var/run/postgresql && \
-    chmod 2777 /var/run/postgresql && \
-    chown -R postgres:postgres /var/lib/postgresql/conf && \
-    mkdir -p /docker-entrypoint-initdb.d && \
-    # Create data directory and set permissions
-    mkdir -p "$PGDATA" && \
-    chown -R postgres:postgres "$PGDATA" && \
-    chmod 700 "$PGDATA" # Changed to 700 for security
+    # Create data and backup directory, set permissions to 700 for security
+    mkdir -p -m 700 "$PGDATA" /backup && \
+    chown -R postgres:postgres "$PGDATA" /backup
 
 # Define the volume
 VOLUME /var/lib/postgresql/data
