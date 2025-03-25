@@ -156,8 +156,8 @@ RUN apk add --no-cache \
     mkdir -p -m 2777 /var/run/postgresql && \
     chown -R postgres:postgres /var/run/postgresql && \
     # Create data and backup directory, set permissions to 700 for security
-    mkdir -p -m 700 "$PGDATA" /backup && \
-    chown -R postgres:postgres "$PGDATA" /backup
+    mkdir -p -m 700 "$PGDATA" && \
+    chown -R postgres:postgres "$PGDATA"
 
 # Define the volume
 VOLUME /var/lib/postgresql/data
