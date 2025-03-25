@@ -175,7 +175,7 @@ STOPSIGNAL SIGINT
 # Expose port
 EXPOSE 5432
 
-# Expose Port
+# Set default user
 USER postgres
 
 # Command.  Removed ssl options from here, those are better handled with environment variables or in the postgresql.conf
