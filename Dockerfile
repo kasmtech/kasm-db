@@ -6,8 +6,8 @@ WORKDIR /usr/src/postgresql
 
 # Environment variables for PostgreSQL version
 ENV PG_MAJOR 14
-ENV PG_VERSION 14.12
-ENV PG_SHA256 6118d08f9ddcc1bd83cf2b7cc74d3b583bdcec2f37e6245a8ac003b8faa80923
+ENV PG_VERSION 14.17
+ENV PG_SHA256 6ce0ccd6403bf7f0f2eddd333e2ee9ba02edfa977c66660ed9b4b1057e7630a1
 
 # Install build dependencies.  Use --no-cache to keep the image size down.
 RUN apk add --no-cache --virtual .build-deps \
