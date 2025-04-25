@@ -93,16 +93,16 @@ RUN set -eux; \
     make install-world && \
     make -C contrib install
 
-# Get runtime dependencies
+# Record runtime dependencies
 RUN set -eux && \
-    runDeps="$( \
+    RUN_DEPS="$( \
         scanelf --needed --nobanner --format '%n#p' --recursive /usr/local \
             | tr ',' '\n' \
             | sort -u \
             | awk 'system("[ -e /usr/local/lib/" $1 " ]") == 0 { next } { print "so:" $1 }' \
             | grep -v -e perl -e python -e tcl \
     )" && \
-    apk add --no-cache --virtual .postgresql-rundeps $runDeps
+    echo $RUN_DEPS > /usr/local/run_deps_from_build
 
 # install pgaudit
 RUN set -eux && \
@@ -148,6 +148,9 @@ RUN apk add --no-cache \
         icu \
         libuuid \
         libedit && \
+    RUN_DEPS=$(cat /usr/local/run_deps_from_build) && \
+    apk add --no-cache --virtual .postgresql-rundeps $RUN_DEPS && \
+    rm /usr/local/run_deps_from_build && \
     # set user and group.  Use numeric IDs for consistency and avoid issues with different name resolution.
     addgroup -g 70 -S postgres && \
     adduser -u 70 -S -D -G postgres -H -h /var/lib/postgresql -s /bin/sh postgres && \
