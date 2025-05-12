@@ -52,12 +52,6 @@ RUN set -eux; \
     \
     gnuArch="$(dpkg-architecture --query DEB_BUILD_GNU_TYPE)"
 
-# Use local copies of config subscripts, as git.savannah.gnu.org has been unreliable for connections
-# Original sources are:
-# https://git.savannah.gnu.org/cgit/config.git/plain/config.guess?id=7d3d27baf8107b630586c962c057e22149653deb
-# https://git.savannah.gnu.org/cgit/config.git/plain/config.sub?id=7d3d27baf8107b630586c962c057e22149653deb
-COPY config/config.guess config/config.sub config/
-
 # Patching pg_config_manual.h
 RUN set -eux; \
     awk '$1 == "#define" && $2 == "DEFAULT_PGSOCKET_DIR" && $3 == "\"/tmp\"" { $3 = "\"/var/run/postgresql\""; print; next } { print }' src/include/pg_config_manual.h > src/include/pg_config_manual.h.new; \
