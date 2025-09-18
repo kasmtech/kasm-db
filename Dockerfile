@@ -1,13 +1,13 @@
 # Stage 1: Build Stage
-FROM alpine:3.22 as builder
+FROM alpine:3.22 AS builder
 
 # Set working directory
 WORKDIR /usr/src/postgresql
 
 # Environment variables for PostgreSQL version
-ENV PG_MAJOR 14
-ENV PG_VERSION 14.17
-ENV PG_SHA256 6ce0ccd6403bf7f0f2eddd333e2ee9ba02edfa977c66660ed9b4b1057e7630a1
+ENV PG_MAJOR=16
+ENV PG_VERSION=16.10
+ENV PG_SHA256=de8485f4ce9c32e3ddfeef0b7c261eed1cecb54c9bcd170e437ff454cb292b42
 
 # Install build dependencies.  Use --no-cache to keep the image size down.
 RUN apk add --no-cache --virtual .build-deps \
@@ -117,8 +117,8 @@ RUN set -eux && \
 FROM alpine:3.22
 
 # Env Variables
-ENV LANG en_US.utf8
-ENV PGDATA /var/lib/postgresql/data
+ENV LANG=en_US.utf8
+ENV PGDATA=/var/lib/postgresql/data
 
 # Copy initial config files
 COPY ./config/data.sql /docker-entrypoint-initdb.d/data.sql
