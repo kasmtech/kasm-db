@@ -1,6 +1,11 @@
-image: docker
+image: docker:28.2.2
 services:
-  - docker:dind
+  - docker:28.2.2-dind
+
+variables:
+  DOCKER_HOST: tcp://docker:2375
+  DOCKER_TLS_CERTDIR: ""
+  DOCKER_AUTH_CONFIG: ${_DOCKER_AUTH_CONFIG}
 
 stages:
  - build
@@ -26,7 +31,7 @@ build-container:
     - ${TAG}
   parallel:
     matrix:
-      - TAG: [ aws-autoscale, aws-autoscale-arm64 ]
+      - TAG: [ oci-fixed-amd, oci-fixed-arm ]
 
 manifest-container:
   stage: manifest
@@ -43,7 +48,7 @@ manifest-container:
   except:
     - schedules
   tags:
-    - aws-autoscale
+    - oci-fixed-amd
 
 build-container-dev:
   stage: build
@@ -58,7 +63,7 @@ build-container-dev:
     - ${TAG}
   parallel:
     matrix:
-      - TAG: [ aws-autoscale, aws-autoscale-arm64 ]
+      - TAG: [ oci-fixed-amd, oci-fixed-arm ]
 
 manifest-container-dev:
   stage: manifest
@@ -73,7 +78,7 @@ manifest-container-dev:
     - develop
     - /^release\/.*$/
   tags:
-    - aws-autoscale
+    - oci-fixed-amd
 
 build-container-schedules:
   stage: build
@@ -87,7 +92,7 @@ build-container-schedules:
     - ${TAG}
   parallel:
     matrix:
-      - TAG: [ aws-autoscale, aws-autoscale-arm64 ]
+      - TAG: [ oci-fixed-amd, oci-fixed-arm ]
 
 manifest-container-schedules:
   stage: build
@@ -101,4 +106,4 @@ manifest-container-schedules:
   only:
     - schedules
   tags:
-    - aws-autoscale
+    - oci-fixed-amd
