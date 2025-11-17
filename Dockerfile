@@ -1,5 +1,5 @@
 # Stage 1: Build Stage
-FROM alpine:3.18 as builder
+FROM alpine:3.22 as builder
 
 # Set working directory
 WORKDIR /usr/src/postgresql
@@ -114,7 +114,7 @@ RUN set -eux && \
 
 
 # Stage 2: Runtime Stage
-FROM alpine:3.18
+FROM alpine:3.22
 
 # Env Variables
 ENV LANG en_US.utf8
