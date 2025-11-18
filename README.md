@@ -4,7 +4,7 @@ Forked version of Postgres 16 build logic located [here](https://github.com/dock
 
 # Using this image
 
-This image is pubished at [https://hub.docker.com/r/kasmweb/postgres](https://hub.docker.com/r/kasmweb/postgres) with `kasmweb/postgres:1.18.0` being the current release.
+This image is published at [https://hub.docker.com/r/kasmweb/postgres](https://hub.docker.com/r/kasmweb/postgres) with `kasmweb/postgres:1.18.0` being the current release, it is automatically deployed as the database container as a part of [Kasm Workspaces](https://kasm.com/downloads).
 
 # Custom Extensions
 
