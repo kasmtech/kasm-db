@@ -129,8 +129,10 @@ COPY --from=builder /usr/local /usr/local
 # Copy the entrypoint script
 COPY docker-entrypoint.sh /usr/local/bin/
 
-# Install runtime dependencies
-RUN apk add --no-cache \
+# Install runtime dependencies and patch busybox to fix CVE
+RUN apk update \
+    && apk add --no-cache --upgrade busybox busybox-binsh ssl_client \
+    && apk add --no-cache \
         bash \
         su-exec \
         tzdata \
