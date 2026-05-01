@@ -60,8 +60,11 @@ RUN set -eux; \
     mv src/include/pg_config_manual.h.new src/include/pg_config_manual.h;
 
 # Configure, compile, and install PostgreSQL
+# LLVM_CONFIG: Alpine 3.23+ installs the binary as llvm-config-<ver> with no plain symlink;
+# detect it dynamically so --with-llvm works regardless of LLVM version.
 RUN set -eux; \
     gnuArch="$(dpkg-architecture --query DEB_BUILD_GNU_TYPE)" && \
+    export LLVM_CONFIG="$(find /usr/bin -name 'llvm-config-*' | sort -V | tail -1)" && \
     ./configure \
         --build="$gnuArch" \
         --enable-integer-datetimes \
@@ -69,13 +72,11 @@ RUN set -eux; \
         --enable-tap-tests \
         --disable-rpath \
         --with-uuid=e2fs \
-        --with-gnu-ld \
         --with-pgport=5432 \
         --with-system-tzdata=/usr/share/zoneinfo \
         --prefix=/usr/local \
         --with-includes=/usr/local/include \
         --with-libraries=/usr/local/lib \
-        --with-krb5 \
         --with-gssapi \
         --with-ldap \
         --with-tcl \
