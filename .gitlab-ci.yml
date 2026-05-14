@@ -36,7 +36,7 @@ manifest-container:
   stage: manifest
   script:
     - docker pull ${ORG_NAME}/postgres:x86_64-$SANITIZED_BRANCH
-    - docker pull ${ORG_NAME}/postgres:aarch64-$SANITIZED_BRANCH
+    - docker pull --platform linux/arm64 ${ORG_NAME}/postgres:aarch64-$SANITIZED_BRANCH
     - "docker manifest push --purge ${ORG_NAME}/postgres:$SANITIZED_BRANCH || :"
     - docker manifest create ${ORG_NAME}/postgres:$SANITIZED_BRANCH ${ORG_NAME}/postgres:x86_64-$SANITIZED_BRANCH ${ORG_NAME}/postgres:aarch64-$SANITIZED_BRANCH
     - docker manifest annotate ${ORG_NAME}/postgres:$SANITIZED_BRANCH ${ORG_NAME}/postgres:aarch64-$SANITIZED_BRANCH --os linux --arch arm64 --variant v8
@@ -68,7 +68,7 @@ manifest-container-dev:
   stage: manifest
   script:
     - docker pull ${ORG_NAME}/postgres-private:x86_64-$SANITIZED_BRANCH
-    - docker pull ${ORG_NAME}/postgres-private:aarch64-$SANITIZED_BRANCH
+    - docker pull --platform linux/arm64 ${ORG_NAME}/postgres-private:aarch64-$SANITIZED_BRANCH
     - "docker manifest push --purge ${ORG_NAME}/postgres-private:$SANITIZED_BRANCH || :"
     - docker manifest create ${ORG_NAME}/postgres-private:$SANITIZED_BRANCH ${ORG_NAME}/postgres-private:x86_64-$SANITIZED_BRANCH ${ORG_NAME}/postgres-private:aarch64-$SANITIZED_BRANCH
     - docker manifest annotate ${ORG_NAME}/postgres-private:$SANITIZED_BRANCH ${ORG_NAME}/postgres-private:aarch64-$SANITIZED_BRANCH --os linux --arch arm64 --variant v8
@@ -97,7 +97,7 @@ manifest-container-schedules:
   stage: build
   script:
     - docker pull ${ORG_NAME}/postgres:x86_64-$SANITIZED_ROLLING_BRANCH
-    - docker pull ${ORG_NAME}/postgres:aarch64-$SANITIZED_ROLLING_BRANCH
+    - docker pull --platform linux/arm64 ${ORG_NAME}/postgres:aarch64-$SANITIZED_ROLLING_BRANCH
     - "docker manifest push --purge ${ORG_NAME}/postgres:$SANITIZED_ROLLING_BRANCH || :"
     - docker manifest create ${ORG_NAME}/postgres:$SANITIZED_ROLLING_BRANCH ${ORG_NAME}/postgres:x86_64-$SANITIZED_ROLLING_BRANCH ${ORG_NAME}/postgres:aarch64-$SANITIZED_ROLLING_BRANCH
     - docker manifest annotate ${ORG_NAME}/postgres:$SANITIZED_ROLLING_BRANCH ${ORG_NAME}/postgres:aarch64-$SANITIZED_ROLLING_BRANCH --os linux --arch arm64 --variant v8
