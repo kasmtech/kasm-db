@@ -1,13 +1,13 @@
 # Stage 1: Build Stage
-FROM alpine:3.22 AS builder
+FROM alpine:3.23 AS builder
 
 # Set working directory
 WORKDIR /usr/src/postgresql
 
 # Environment variables for PostgreSQL version
 ENV PG_MAJOR=16
-ENV PG_VERSION=16.10
-ENV PG_SHA256=de8485f4ce9c32e3ddfeef0b7c261eed1cecb54c9bcd170e437ff454cb292b42
+ENV PG_VERSION=16.13
+ENV PG_SHA256=dc2ddbbd245c0265a689408e3d2f2f3f9ba2da96bd19318214b313cdd9797287
 
 # Install build dependencies.  Use --no-cache to keep the image size down.
 RUN apk add --no-cache --virtual .build-deps \
@@ -60,8 +60,11 @@ RUN set -eux; \
     mv src/include/pg_config_manual.h.new src/include/pg_config_manual.h;
 
 # Configure, compile, and install PostgreSQL
+# LLVM_CONFIG: Alpine 3.23+ installs the binary as llvm-config-<ver> with no plain symlink;
+# detect it dynamically so --with-llvm works regardless of LLVM version.
 RUN set -eux; \
     gnuArch="$(dpkg-architecture --query DEB_BUILD_GNU_TYPE)" && \
+    export LLVM_CONFIG="$(find /usr/bin -name 'llvm-config-*' | sort -V | tail -1)" && \
     ./configure \
         --build="$gnuArch" \
         --enable-integer-datetimes \
@@ -69,13 +72,11 @@ RUN set -eux; \
         --enable-tap-tests \
         --disable-rpath \
         --with-uuid=e2fs \
-        --with-gnu-ld \
         --with-pgport=5432 \
         --with-system-tzdata=/usr/share/zoneinfo \
         --prefix=/usr/local \
         --with-includes=/usr/local/include \
         --with-libraries=/usr/local/lib \
-        --with-krb5 \
         --with-gssapi \
         --with-ldap \
         --with-tcl \
@@ -114,7 +115,7 @@ RUN set -eux && \
 
 
 # Stage 2: Runtime Stage
-FROM alpine:3.22
+FROM alpine:3.23
 
 # Env Variables
 ENV LANG=en_US.utf8
