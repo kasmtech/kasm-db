@@ -65,3 +65,8 @@ Here are the classes available for logging:
   * MISC_SET: Miscellaneous SET commands, e.g. SET ROLE.
   * ALL: Include all of the above.
 
+
+
+## Reporting Issues
+
+To report any issues for this repository, please use our central issue tracker: **[Kasm Workspaces Issue Tracker](https://github.com/kasmtech/workspaces-issues/issues)**
