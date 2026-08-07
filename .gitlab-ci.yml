@@ -1,108 +1,81 @@
-image: docker:29.4.3
-services:
-  - docker:29.4.3-dind
+stages:
+  - validate
+  - build
+  - scan
+  - kasm builder
+
+include:
+  - project: 'kasm-technologies/internal/kasm_builder'
+    file: '/application-ci-include.yml'
+
+# Prevent duplicate pipelines for push events to branches that also have open MRs
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      when: always
+    - if: $CI_PIPELINE_SOURCE == "push" && $CI_OPEN_MERGE_REQUESTS
+      when: never
+    - when: always
 
 variables:
   DOCKER_HOST: tcp://docker:2375
   DOCKER_TLS_CERTDIR: ""
   DOCKER_AUTH_CONFIG: ${_DOCKER_AUTH_CONFIG}
+  IMAGE_PREFIX: "${ORG_NAME}/postgres-private"
+  CANDIDATE_TAG: "candidate-${CI_COMMIT_SHORT_SHA}-${CI_PIPELINE_ID}"
 
-stages:
- - build
- - manifest
+default:
+  image: registry.gitlab.com/kasm-technologies/internal/qa-infrastructure/kasm-ci:v29.4.3
+  services:
+    - docker:29.4.3-dind
+  retry: 2
+  tags:
+    - oci-fixed-amd
 
-before_script:
-  - export SANITIZED_BRANCH="$(echo $CI_COMMIT_REF_NAME | sed -r 's#^release/##'  | sed 's/\//_/g')"
-  - export SANITIZED_ROLLING_BRANCH=${SANITIZED_BRANCH}-rolling
 
-build-container:
+
+build:
   stage: build
   script:
-    - openssl req -x509 -nodes -days 1825 -newkey rsa:2048 -keyout db_server.key -out db_server.crt -subj "/C=US/ST=VA/L=None/O=None/OU=DoFu/CN=$(hostname)/emailAddress=none@none.none"
-    - docker build --provenance=false -t ${ORG_NAME}/postgres:$(arch)-$SANITIZED_BRANCH .
-    - docker push ${ORG_NAME}/postgres:$(arch)-$SANITIZED_BRANCH
-  only:
-    - develop
-    - /^release\/.*$/
-  except:
-    - schedules
+    - docker build --provenance=false -t "${IMAGE_PREFIX}:$(arch)-${CANDIDATE_TAG}" .
+    - docker push "${IMAGE_PREFIX}:$(arch)-${CANDIDATE_TAG}"
   tags:
     - ${TAG}
   parallel:
     matrix:
       - TAG: [ oci-fixed-amd, oci-fixed-arm ]
 
-manifest-container:
-  stage: manifest
+
+
+manifest:
+  needs:
+    - build
+  stage: build
   script:
-    - docker pull ${ORG_NAME}/postgres:x86_64-$SANITIZED_BRANCH
-    - docker pull --platform linux/arm64 ${ORG_NAME}/postgres:aarch64-$SANITIZED_BRANCH
-    - "docker manifest push --purge ${ORG_NAME}/postgres:$SANITIZED_BRANCH || :"
-    - docker manifest create ${ORG_NAME}/postgres:$SANITIZED_BRANCH ${ORG_NAME}/postgres:x86_64-$SANITIZED_BRANCH ${ORG_NAME}/postgres:aarch64-$SANITIZED_BRANCH
-    - docker manifest annotate ${ORG_NAME}/postgres:$SANITIZED_BRANCH ${ORG_NAME}/postgres:aarch64-$SANITIZED_BRANCH --os linux --arch arm64 --variant v8
-    - docker manifest push --purge ${ORG_NAME}/postgres:$SANITIZED_BRANCH
-  only:
-    - develop
-    - /^release\/.*$/
-  except:
-    - schedules
+    - docker pull
+        "${IMAGE_PREFIX}:x86_64-${CANDIDATE_TAG}"
+    - docker pull
+        --platform linux/arm64
+        "${IMAGE_PREFIX}:aarch64-${CANDIDATE_TAG}"
+    - docker manifest push --purge "${IMAGE_PREFIX}:${CANDIDATE_TAG}" || true
+    - docker manifest create
+        "${IMAGE_PREFIX}:${CANDIDATE_TAG}"
+        "${IMAGE_PREFIX}:x86_64-${CANDIDATE_TAG}"
+        "${IMAGE_PREFIX}:aarch64-${CANDIDATE_TAG}"
+    - docker manifest annotate
+        "${IMAGE_PREFIX}:${CANDIDATE_TAG}"
+        "${IMAGE_PREFIX}:aarch64-${CANDIDATE_TAG}"
+        --os linux
+        --arch arm64
+        --variant v8
+    - docker manifest push --purge "${IMAGE_PREFIX}:${CANDIDATE_TAG}"
+    - echo published "${IMAGE_PREFIX}:${CANDIDATE_TAG}"
   tags:
     - oci-fixed-amd
 
-build-container-dev:
-  stage: build
-  script:
-    - openssl req -x509 -nodes -days 1825 -newkey rsa:2048 -keyout db_server.key -out db_server.crt -subj "/C=US/ST=VA/L=None/O=None/OU=DoFu/CN=$(hostname)/emailAddress=none@none.none"
-    - docker build --provenance=false -t ${ORG_NAME}/postgres-private:$(arch)-$SANITIZED_BRANCH .
-    - docker push ${ORG_NAME}/postgres-private:$(arch)-$SANITIZED_BRANCH
-  except:
-    - develop
-    - /^release\/.*$/
-  tags:
-    - ${TAG}
-  parallel:
-    matrix:
-      - TAG: [ oci-fixed-amd, oci-fixed-arm ]
 
-manifest-container-dev:
-  stage: manifest
-  script:
-    - docker pull ${ORG_NAME}/postgres-private:x86_64-$SANITIZED_BRANCH
-    - docker pull --platform linux/arm64 ${ORG_NAME}/postgres-private:aarch64-$SANITIZED_BRANCH
-    - "docker manifest push --purge ${ORG_NAME}/postgres-private:$SANITIZED_BRANCH || :"
-    - docker manifest create ${ORG_NAME}/postgres-private:$SANITIZED_BRANCH ${ORG_NAME}/postgres-private:x86_64-$SANITIZED_BRANCH ${ORG_NAME}/postgres-private:aarch64-$SANITIZED_BRANCH
-    - docker manifest annotate ${ORG_NAME}/postgres-private:$SANITIZED_BRANCH ${ORG_NAME}/postgres-private:aarch64-$SANITIZED_BRANCH --os linux --arch arm64 --variant v8
-    - docker manifest push --purge ${ORG_NAME}/postgres-private:$SANITIZED_BRANCH
-  except:
-    - develop
-    - /^release\/.*$/
-  tags:
-    - oci-fixed-amd
 
-build-container-schedules:
-  stage: build
-  script:
-    - openssl req -x509 -nodes -days 1825 -newkey rsa:2048 -keyout db_server.key -out db_server.crt -subj "/C=US/ST=VA/L=None/O=None/OU=DoFu/CN=$(hostname)/emailAddress=none@none.none"
-    - docker build --provenance=false -t ${ORG_NAME}/postgres:$(arch)-$SANITIZED_ROLLING_BRANCH .
-    - docker push ${ORG_NAME}/postgres:$(arch)-$SANITIZED_ROLLING_BRANCH
-  only:
-    - schedules
-  tags:
-    - ${TAG}
-  parallel:
-    matrix:
-      - TAG: [ oci-fixed-amd, oci-fixed-arm ]
-
-manifest-container-schedules:
-  stage: build
-  script:
-    - docker pull ${ORG_NAME}/postgres:x86_64-$SANITIZED_ROLLING_BRANCH
-    - docker pull --platform linux/arm64 ${ORG_NAME}/postgres:aarch64-$SANITIZED_ROLLING_BRANCH
-    - "docker manifest push --purge ${ORG_NAME}/postgres:$SANITIZED_ROLLING_BRANCH || :"
-    - docker manifest create ${ORG_NAME}/postgres:$SANITIZED_ROLLING_BRANCH ${ORG_NAME}/postgres:x86_64-$SANITIZED_ROLLING_BRANCH ${ORG_NAME}/postgres:aarch64-$SANITIZED_ROLLING_BRANCH
-    - docker manifest annotate ${ORG_NAME}/postgres:$SANITIZED_ROLLING_BRANCH ${ORG_NAME}/postgres:aarch64-$SANITIZED_ROLLING_BRANCH --os linux --arch arm64 --variant v8
-    - docker manifest push --purge ${ORG_NAME}/postgres:$SANITIZED_ROLLING_BRANCH
-  only:
-    - schedules
-  tags:
-    - oci-fixed-amd
+build Kasm:
+  extends:
+    - .kasm-builder-trigger
+  stage: kasm builder
