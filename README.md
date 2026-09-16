@@ -8,7 +8,7 @@ This image is published at [https://hub.docker.com/r/kasmweb/postgres](https://h
 
 # PostgreSQL Version
 
-This image does not pin a fixed PostgreSQL 16 minor version in the `Dockerfile`. Each build auto-resolves the latest `16.x` release (and a matching stable [PGAudit](https://www.pgaudit.org/) tag) from the official PostgreSQL source index at build time, so routine minor-version security fixes are picked up automatically without a code change. This only ever moves within the `16.x` line — a major upgrade (e.g. to PostgreSQL 17) requires a deliberate change to this repo.
+This image does not pin a fixed PostgreSQL 16 minor version in the `Dockerfile`. Each build auto-resolves the latest `16.x` release (and a matching stable [PGAudit](https://www.pgaudit.org/) tag) from the official PostgreSQL source index at build time, so routine minor-version security fixes are picked up automatically without a code change. This only ever moves within the `16.x` line — a major upgrade (e.g. to PostgreSQL 17) requires a deliberate change to this repo. CI resolves these values once per pipeline and passes them explicitly to every build job, so a rebuild always picks up a new release correctly; a local, ad-hoc `docker build .` should be run with `--no-cache` if you want it to re-check for a newer release rather than reuse a previously resolved version from Docker's layer cache.
 
 To build with an exact, pinned version instead (e.g. to reproduce a specific past build):
 

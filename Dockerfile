@@ -74,6 +74,8 @@ RUN set -eux; \
         PG_SHA256="$(wget -qO- "https://ftp.postgresql.org/pub/source/v$PG_VERSION/postgresql-$PG_VERSION.tar.bz2.sha256" \
             | awk '{print $1}')"; \
     fi; \
+    : "${PG_VERSION:?could not resolve latest PostgreSQL $PG_MAJOR.x version from ftp.postgresql.org}"; \
+    : "${PG_SHA256:?could not resolve PG_SHA256 for PostgreSQL $PG_VERSION}"; \
     echo "resolved PG_VERSION=$PG_VERSION PG_SHA256=$PG_SHA256"; \
     wget -O postgresql.tar.bz2 "https://ftp.postgresql.org/pub/source/v$PG_VERSION/postgresql-$PG_VERSION.tar.bz2"; \
     echo "$PG_SHA256 *postgresql.tar.bz2" | sha256sum -c -; \
@@ -149,6 +151,7 @@ RUN set -eux && \
     if [ -z "$PGAUDIT_VERSION" ]; then \
         PGAUDIT_VERSION="$(git tag --list "${PG_MAJOR}.*" | grep -vE '(beta|rc)[0-9]*$' | sort -V | tail -1)"; \
     fi && \
+    : "${PGAUDIT_VERSION:?could not resolve a PGAudit release tag matching PostgreSQL major $PG_MAJOR}" && \
     echo "resolved PGAUDIT_VERSION=$PGAUDIT_VERSION" && \
     git checkout "$PGAUDIT_VERSION" && \
     make install USE_PGXS=1 PG_CONFIG=/usr/local/bin/pg_config && \
