@@ -13,15 +13,26 @@ Custom PostgreSQL Docker image for Kasm Workspaces. Builds PostgreSQL 16 from so
 - **`config/data.sql`** — Initial seed SQL run at first container start (`/docker-entrypoint-initdb.d/`).
 - **`.gitlab-ci.yml`** — Multi-arch (amd64 + arm64) build pipeline pushing to `kasmweb/postgres` (releases) or `kasmweb/postgres-private` (feature branches).
 
-## Bumping PostgreSQL Version
+## PostgreSQL/PGAudit Version Resolution
 
-When upgrading to a new PostgreSQL 16.x minor version:
+`PG_VERSION`, `PG_SHA256`, and `PGAUDIT_VERSION` are `ARG`s in `Dockerfile` with **no default** (only `PG_MAJOR` defaults, to `16`). When left unset, the build auto-resolves them at build time:
 
-1. Find the latest version at https://ftp.postgresql.org/pub/source/
-2. Download the SHA256: `curl https://ftp.postgresql.org/pub/source/vX.Y/postgresql-X.Y.tar.bz2.sha256`
-3. Update `PG_VERSION` and `PG_SHA256` in `Dockerfile`
-4. Also update the Alpine base image tag if a newer stable release is available (https://alpinelinux.org/releases/)
-5. PGAudit is pulled from the `REL_${PG_MAJOR}_STABLE` branch — no version pin needed for minor bumps
+- `PG_VERSION` → latest `PG_MAJOR.x` minor listed at https://ftp.postgresql.org/pub/source/
+- `PG_SHA256` → fetched fresh from the matching official `.sha256` file, so the download is still checksum-verified even when the version was auto-resolved
+- `PGAUDIT_VERSION` → latest stable tag matching `PG_MAJOR.*` in the pgaudit repo (pre-release `beta`/`rc` tags excluded), checked out instead of floating on the `REL_${PG_MAJOR}_STABLE` branch head
+
+This means a routine minor bump (including a CVE fix) lands automatically on the next build/pipeline run — no Dockerfile edit needed. It only ever rolls forward within `PG_MAJOR` (e.g. 16.12 → 16.15); a major upgrade (16 → 17) requires deliberately bumping the `PG_MAJOR` default, which is a separate, reviewed change (major PG upgrades also need a data migration, not just a new binary).
+
+To pin an exact version instead of auto-resolving (e.g. to reproduce a specific release build), pass `--build-arg`:
+
+```bash
+docker build \
+  --build-arg PG_VERSION=16.15 \
+  --build-arg PG_SHA256=<sha> \
+  --build-arg PGAUDIT_VERSION=16.1 .
+```
+
+Also update the Alpine base image tag if a newer stable release is available (https://alpinelinux.org/releases/) — this is not auto-resolved.
 
 ## Build & Test
 

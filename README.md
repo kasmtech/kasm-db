@@ -6,6 +6,19 @@ Forked version of Postgres 16 build logic located [here](https://github.com/dock
 
 This image is published at [https://hub.docker.com/r/kasmweb/postgres](https://hub.docker.com/r/kasmweb/postgres) with `kasmweb/postgres:1.18.0` being the current release, it is automatically deployed as the database container as a part of [Kasm Workspaces](https://kasm.com/downloads).
 
+# PostgreSQL Version
+
+This image does not pin a fixed PostgreSQL 16 minor version in the `Dockerfile`. Each build auto-resolves the latest `16.x` release (and a matching stable [PGAudit](https://www.pgaudit.org/) tag) from the official PostgreSQL source index at build time, so routine minor-version security fixes are picked up automatically without a code change. This only ever moves within the `16.x` line — a major upgrade (e.g. to PostgreSQL 17) requires a deliberate change to this repo.
+
+To build with an exact, pinned version instead (e.g. to reproduce a specific past build):
+
+```bash
+docker build \
+  --build-arg PG_VERSION=16.15 \
+  --build-arg PG_SHA256=<sha256-of-that-release> \
+  --build-arg PGAUDIT_VERSION=16.1 .
+```
+
 # Custom Extensions
 
 ## PGAudit
