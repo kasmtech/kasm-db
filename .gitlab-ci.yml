@@ -1,5 +1,6 @@
 stages:
   - validate
+  - resolve
   - build
   - scan
   - kasm builder
@@ -32,12 +33,44 @@ default:
   tags:
     - oci-fixed-amd
 
-
+# Resolves PG_VERSION/PG_SHA256/PGAUDIT_VERSION once per pipeline and publishes
+# them as a dotenv artifact. Docker's layer cache is keyed on instruction text,
+# not on what a RUN's network calls return, so a plain `docker build .` re-run
+# without --no-cache would otherwise silently keep a stale resolved version.
+# Resolving here and passing the values as --build-arg to the build job also
+# guarantees the amd64 and arm64 legs land on identical versions, even if a new
+# PostgreSQL/PGAudit release publishes mid-pipeline.
+resolve-pg-versions:
+  stage: resolve
+  image: alpine:3.23
+  services: []
+  script:
+    - apk add --no-cache wget git
+    - PG_MAJOR=16
+    - PG_VERSION="$(wget -qO- https://ftp.postgresql.org/pub/source/ | grep -oE "href=\"v$PG_MAJOR\.[0-9]+/\"" | sed -E 's/href="v(.*)\/"/\1/' | sort -V | tail -1)"
+    - test -n "$PG_VERSION"
+    - PG_SHA256="$(wget -qO- "https://ftp.postgresql.org/pub/source/v$PG_VERSION/postgresql-$PG_VERSION.tar.bz2.sha256" | awk '{print $1}')"
+    - test -n "$PG_SHA256"
+    - git clone --quiet https://github.com/pgaudit/pgaudit.git /tmp/pgaudit
+    - PGAUDIT_VERSION="$(cd /tmp/pgaudit && git tag --list "${PG_MAJOR}.*" | grep -vE '(beta|rc)[0-9]*$' | sort -V | tail -1)"
+    - test -n "$PGAUDIT_VERSION"
+    - echo "PG_VERSION=$PG_VERSION" >> build.env
+    - echo "PG_SHA256=$PG_SHA256" >> build.env
+    - echo "PGAUDIT_VERSION=$PGAUDIT_VERSION" >> build.env
+    - cat build.env
+  artifacts:
+    reports:
+      dotenv: build.env
 
 build:
   stage: build
+  needs: ["resolve-pg-versions"]
   script:
-    - docker build --provenance=false -t "${IMAGE_PREFIX}:$(arch)-${CANDIDATE_TAG}" .
+    - docker build --provenance=false
+        --build-arg PG_VERSION=$PG_VERSION
+        --build-arg PG_SHA256=$PG_SHA256
+        --build-arg PGAUDIT_VERSION=$PGAUDIT_VERSION
+        -t "${IMAGE_PREFIX}:$(arch)-${CANDIDATE_TAG}" .
     - docker push "${IMAGE_PREFIX}:$(arch)-${CANDIDATE_TAG}"
   tags:
     - ${TAG}
@@ -72,8 +105,6 @@ manifest:
     - echo published "${IMAGE_PREFIX}:${CANDIDATE_TAG}"
   tags:
     - oci-fixed-amd
-
-
 
 build Kasm:
   extends:
