@@ -28,6 +28,19 @@ sed -i 's/postgres:12-alpine/kasmweb\/postgres:1.12.0/g' kasm_release/docker/doc
 
 Before installing be sure to follow the instructions in the [Custom Extensions](#custom-extensions) section.
 
+# PostgreSQL Version
+
+This image does not pin a fixed PostgreSQL 14 minor version in the `Dockerfile`. Each build auto-resolves the latest `14.x` release (and the matching stable [PGAudit](https://www.pgaudit.org/) `1.6.x` release — PGAudit tagged releases independently of the PostgreSQL major version prior to PG16) from the official PostgreSQL source index at build time, so routine minor-version security fixes are picked up automatically without a code change. This only ever moves within the `14.x` line — a major upgrade requires a deliberate change to this repo. CI resolves these values once per pipeline and passes them explicitly to every build job, so a rebuild always picks up a new release correctly; a local, ad-hoc `docker build .` should be run with `--no-cache` if you want it to re-check for a newer release rather than reuse a previously resolved version from Docker's layer cache.
+
+To build with an exact, pinned version instead (e.g. to reproduce a specific past build):
+
+```bash
+docker build \
+  --build-arg PG_VERSION=14.24 \
+  --build-arg PG_SHA256=<sha256-of-that-release> \
+  --build-arg PGAUDIT_VERSION=1.6.3 .
+```
+
 # Custom Extensions
 
 ## PGAudit
