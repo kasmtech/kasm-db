@@ -115,7 +115,7 @@ RUN set -eux && \
 
 
 # Stage 2: Runtime Stage
-FROM alpine:3.23
+FROM quay.io/rfcurated/alpine:3.23-rfcurated
 
 # Env Variables
 ENV LANG=en_US.utf8

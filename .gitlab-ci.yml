@@ -7,6 +7,7 @@ stages:
 include:
   - project: 'kasm-technologies/internal/kasm_builder'
     file: '/application-ci-include.yml'
+  - component: $CI_SERVER_FQDN/kasm-technologies/internal/qa-infrastructure/setup-rapidfort@develop
 
 # Prevent duplicate pipelines for push events to branches that also have open MRs
 workflow:
@@ -36,7 +37,14 @@ default:
 
 build:
   stage: build
+  extends:
+    - .setup_rfcurated
+  before_script:
+    - echo "$_DOCKER_AUTH_CONFIG" > /tmp/hub-config.json
+    - !reference [.setup_rfcurated, before_script]
   script:
+    - jq -s '.[0] * .[1]' /tmp/hub-config.json ~/.docker/config.json > /tmp/merged.json && mv /tmp/merged.json ~/.docker/config.json
+    - unset DOCKER_AUTH_CONFIG
     - docker build --provenance=false -t "${IMAGE_PREFIX}:$(arch)-${CANDIDATE_TAG}" .
     - docker push "${IMAGE_PREFIX}:$(arch)-${CANDIDATE_TAG}"
   tags:
