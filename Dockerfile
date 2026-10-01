@@ -1,13 +1,34 @@
+# Build args for the PostgreSQL/PGAudit versions. Left unset (no default) so
+# every build auto-resolves the latest PG_MAJOR.x minor and latest matching
+# PGAudit tag at build time -- minor version bumps (including CVE fixes)
+# land automatically on the next build, no Dockerfile edit needed. Pass
+# --build-arg to pin an exact version instead, e.g. for a reproducible
+# release build:
+#   docker build \
+#     --build-arg PG_VERSION=16.15 \
+#     --build-arg PG_SHA256=<sha> \
+#     --build-arg PGAUDIT_VERSION=16.1 .
+ARG PG_MAJOR=16
+ARG PG_VERSION
+ARG PG_SHA256
+ARG PGAUDIT_VERSION
+
 # Stage 1: Build Stage
 FROM alpine:3.23 AS builder
 
 # Set working directory
 WORKDIR /usr/src/postgresql
 
-# Environment variables for PostgreSQL version
-ENV PG_MAJOR=16
-ENV PG_VERSION=16.13
-ENV PG_SHA256=dc2ddbbd245c0265a689408e3d2f2f3f9ba2da96bd19318214b313cdd9797287
+# Re-declare to bring the global ARGs into this stage, then bind to ENV so
+# they're visible to RUN steps.
+ARG PG_MAJOR
+ARG PG_VERSION
+ARG PG_SHA256
+ARG PGAUDIT_VERSION
+ENV PG_MAJOR=${PG_MAJOR}
+ENV PG_VERSION=${PG_VERSION}
+ENV PG_SHA256=${PG_SHA256}
+ENV PGAUDIT_VERSION=${PGAUDIT_VERSION}
 
 # Install build dependencies.  Use --no-cache to keep the image size down.
 RUN apk add --no-cache --virtual .build-deps \
@@ -37,8 +58,25 @@ RUN apk add --no-cache --virtual .build-deps \
     icu-dev \
     wget
 
-# Download and extract PostgreSQL source
+# Download and extract PostgreSQL source. If PG_VERSION wasn't pinned via
+# --build-arg, auto-resolve the latest PG_MAJOR.x minor from the official
+# source index; PG_SHA256 (if unset) is always fetched fresh from the
+# matching official .sha256 file, so the download is still checksum-verified
+# even on an auto-resolved version.
 RUN set -eux; \
+    if [ -z "$PG_VERSION" ]; then \
+        PG_VERSION="$(wget -qO- https://ftp.postgresql.org/pub/source/ \
+            | grep -oE "href=\"v$PG_MAJOR\.[0-9]+/\"" \
+            | sed -E 's/href="v(.*)\/"/\1/' \
+            | sort -V | tail -1)"; \
+    fi; \
+    if [ -z "$PG_SHA256" ]; then \
+        PG_SHA256="$(wget -qO- "https://ftp.postgresql.org/pub/source/v$PG_VERSION/postgresql-$PG_VERSION.tar.bz2.sha256" \
+            | awk '{print $1}')"; \
+    fi; \
+    : "${PG_VERSION:?could not resolve latest PostgreSQL $PG_MAJOR.x version from ftp.postgresql.org}"; \
+    : "${PG_SHA256:?could not resolve PG_SHA256 for PostgreSQL $PG_VERSION}"; \
+    echo "resolved PG_VERSION=$PG_VERSION PG_SHA256=$PG_SHA256"; \
     wget -O postgresql.tar.bz2 "https://ftp.postgresql.org/pub/source/v$PG_VERSION/postgresql-$PG_VERSION.tar.bz2"; \
     echo "$PG_SHA256 *postgresql.tar.bz2" | sha256sum -c -; \
     mkdir -p /usr/src/postgresql; \
@@ -102,12 +140,20 @@ RUN set -eux && \
     )" && \
     echo $RUN_DEPS > /usr/local/run_deps_from_build
 
-# install pgaudit
+# install pgaudit. If PGAUDIT_VERSION wasn't pinned via --build-arg,
+# auto-resolve the latest release tag matching PG_MAJOR (e.g. "16.1") instead
+# of floating on the REL_${PG_MAJOR}_STABLE branch head, so the checked-out
+# commit is still a specific, reproducible release.
 RUN set -eux && \
     cd /tmp && \
     git clone https://github.com/pgaudit/pgaudit.git && \
     cd pgaudit && \
-    git checkout "REL_${PG_MAJOR}_STABLE" && \
+    if [ -z "$PGAUDIT_VERSION" ]; then \
+        PGAUDIT_VERSION="$(git tag --list "${PG_MAJOR}.*" | grep -vE '(beta|rc)[0-9]*$' | sort -V | tail -1)"; \
+    fi && \
+    : "${PGAUDIT_VERSION:?could not resolve a PGAudit release tag matching PostgreSQL major $PG_MAJOR}" && \
+    echo "resolved PGAUDIT_VERSION=$PGAUDIT_VERSION" && \
+    git checkout "$PGAUDIT_VERSION" && \
     make install USE_PGXS=1 PG_CONFIG=/usr/local/bin/pg_config && \
     apk del --no-network .build-deps && \
     cd / && \
