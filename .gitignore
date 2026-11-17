@@ -1,2 +1,5 @@
 db_server.crt
 db_server.key
+.envrc
+audit-report-*.json
+trivy-complete-report-*.json

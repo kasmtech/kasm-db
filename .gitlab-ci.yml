@@ -114,6 +114,32 @@ manifest:
   tags:
     - oci-fixed-amd
 
+
+
+trivy:
+  stage: scan
+  rules:
+    - if: $CI_COMMIT_REF_PROTECTED == "true"
+      allow_failure: false
+    - allow_failure: true
+  script:
+    - echo "Using trivy $( trivy --version )"
+    - docker pull "${IMAGE_PREFIX}:$(arch)-${CANDIDATE_TAG}"
+    - bash ci-scripts/audit_justification.sh image="${IMAGE_PREFIX}:$(arch)-${CANDIDATE_TAG}" --check-justification
+  tags:
+    - oci-fixed-${PLATFORM}
+  parallel:
+    matrix:
+      - PLATFORM: [ amd, arm ]
+  artifacts:
+    when: always
+    expire_in: 2 weeks
+    paths:
+      - trivy-complete-report-${PLATFORM}.json
+      - audit-report-${PLATFORM}.json
+
+
+
 build Kasm:
   extends:
     - .kasm-builder-trigger
