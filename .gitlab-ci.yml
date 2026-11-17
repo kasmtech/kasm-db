@@ -126,6 +126,7 @@ trivy:
     - echo "Using trivy $( trivy --version )"
     - docker pull "${IMAGE_PREFIX}:$(arch)-${CANDIDATE_TAG}"
     - bash ci-scripts/audit_justification.sh image="${IMAGE_PREFIX}:$(arch)-${CANDIDATE_TAG}" --check-justification
+  retry: 0
   tags:
     - oci-fixed-${PLATFORM}
   parallel:
