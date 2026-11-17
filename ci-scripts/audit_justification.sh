@@ -3,7 +3,16 @@
 for arg; do
     case "$arg" in
         image=*)
-            IMAGE_VERSION="${arg#image=}"
+            IMAGE="${arg#image=}"
+            ;;
+        -h|--help)
+            echo "The following arguments are valid: "
+            echo -e "\t -a|--add-justification (add justfication to be tracked)"
+            echo -e "\t -c|--check-justification (check audit findings against tracked justifications)"
+            echo -e "\t -u|--update-justification (update currently tracked justification)"
+            echo -e "\t -d|--delete-justification (delete tracked justification)"
+            echo -e "\t -v|--view-justification (view tracked justification)"
+            exit 0
             ;;
     esac
 done
@@ -43,18 +52,14 @@ fi
 
 
 check_image(){
-    if [[ -z $IMAGE_VERSION ]]; then
+    if [[ -z $IMAGE ]]; then
         echo "Error: missing the 'image=<image_tag>' argment"
         exit 1
     fi
 
-    SCAN_IMAGE=$(echo $IMAGE_VERSION | awk -F":" '{print $1}')
-
-    if ! docker image ls 2>/dev/null | grep "$SCAN_IMAGE" > /dev/null 2>&1; then
+    if ! docker image inspect "$IMAGE" &>/dev/null; then
         echo "Image does not exists. Building an image to scan"
         build_image
-    else
-        IMAGE="${IMAGE_VERSION}"
     fi
 }
 
@@ -68,7 +73,6 @@ build_image(){
     popd >/dev/null
     rm -rf "$OLDPWD"
 
-    IMAGE="kasmweb/postgres-private:$(arch)-scan"
     docker build \
         --provenance=false \
         --build-arg PG_VERSION=$PG_VERSION \
@@ -76,10 +80,6 @@ build_image(){
         --build-arg PGAUDIT_VERSION=$PGAUDIT_VERSION \
         -t "$IMAGE" \
         .
-}
-
-remove_image(){
-    docker rmi $IMAGE
 }
 
 get_audit(){
@@ -104,8 +104,6 @@ get_audit(){
         "${ROOT_DIR}/trivy-complete-report-${PLATFORM}.json" \
         > "${AUDIT_FILE}"
     cp "${AUDIT_FILE}" "${ROOT_DIR}/audit-report-${PLATFORM}.json"
-
-    remove_image
 }
 
 clean_up_audit_file(){
@@ -370,15 +368,7 @@ for index in "${!ARGS[@]}"; do
         -v|--view-justification)
             view_justification
         ;;
-        -h|--help)
-            echo "The following arguments are valid: "
-            echo -e "\t -a|--add-justification (add justfication to be tracked)"
-            echo -e "\t -c|--check-justification (check audit findings against tracked justifications)"
-            echo -e "\t -u|--update-justification (update currently tracked justification)"
-            echo -e "\t -d|--delete-justification (delete tracked justification)"
-            echo -e "\t -v|--view-justification (view tracked justification)"
-        ;;
-        image=*)
+        image=*|--help)
         ;;
         *)
             echo "Invalid argument"
