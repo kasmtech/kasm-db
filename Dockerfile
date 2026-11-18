@@ -178,7 +178,8 @@ COPY --from=builder /usr/local /usr/local
 COPY docker-entrypoint.sh /usr/local/bin/
 
 # Install runtime dependencies
-RUN apk add --no-cache \
+RUN apk --no-cache upgrade && \
+    apk add --no-cache \
         bash \
         su-exec \
         tzdata \
